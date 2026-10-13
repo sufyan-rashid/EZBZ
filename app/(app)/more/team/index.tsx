@@ -24,6 +24,7 @@ export default function Team() {
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [maxUsers, setMaxUsers] = useState<number | null>(null);
+  const canView = can(permissions, "team", "view");
   const canEdit = can(permissions, "team", "edit");
   const canAdd = can(permissions, "team", "add");
   const canDelete = can(permissions, "team", "delete");
@@ -99,6 +100,16 @@ export default function Team() {
         },
       },
     ]);
+  }
+
+  if (!canView) {
+    return (
+      <View style={styles.centered}>
+        <Text style={{ color: theme.colors.muted }}>
+          You don&apos;t have permission to view the team.
+        </Text>
+      </View>
+    );
   }
 
   return (
@@ -184,6 +195,13 @@ export default function Team() {
 
 const styles = StyleSheet.create({
   container: { padding: theme.spacing.lg, backgroundColor: theme.colors.background },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+  },
   seatsCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.md,

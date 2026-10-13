@@ -26,6 +26,11 @@ export default function More() {
     {
       title: "Business",
       items: [
+        {
+          name: pendingTotal > 0 ? `Pending Sync (${pendingTotal})` : "Pending Sync",
+          route: "/(app)/more/pending-sync",
+          show: true,
+        },
         { name: "Expenses", route: "/(app)/more/expenses", show: can(permissions, "expenses", "view") },
         { name: "Inventory", route: "/(app)/more/inventory", show: can(permissions, "inventory", "view") },
         { name: "Returns", route: "/(app)/more/returns", show: can(permissions, "returns", "view") },
@@ -44,11 +49,6 @@ export default function More() {
       title: "Account",
       items: [
         { name: "My Account", route: "/(app)/more/account", show: true },
-        {
-          name: pendingTotal > 0 ? `Pending Sync (${pendingTotal})` : "Pending Sync",
-          route: "/(app)/more/pending-sync",
-          show: true,
-        },
         {
           name: memberships.length > 1 ? "Switch Business" : "My Businesses",
           route: "/(onboarding)/select-business",

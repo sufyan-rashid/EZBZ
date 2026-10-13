@@ -6,6 +6,7 @@ import { useBusiness } from "../../../../src/hooks/useBusiness";
 import { generateReturnReceipt, InvoiceFormat } from "../../../../src/lib/invoice";
 import { showAlert } from "../../../../src/lib/alert";
 import { Button } from "../../../../src/components/button";
+import { can } from "../../../../src/lib/permissions";
 import { formatQuantity, UnitType } from "../../../../src/lib/units";
 import { formatCurrency } from "../../../../src/lib/currency";
 import { theme } from "../../../../src/lib/theme";
@@ -33,7 +34,7 @@ type ReturnDetail = {
 
 export default function ReturnDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { business } = useBusiness();
+  const { business, permissions } = useBusiness();
   const [ret, setRet] = useState<ReturnDetail | null>(null);
   const [items, setItems] = useState<ReturnItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,6 +98,16 @@ export default function ReturnDetailScreen() {
       showAlert("Error", e?.message ?? "Could not generate the receipt.");
     }
     setPrinting(false);
+  }
+
+  if (!can(permissions, "returns", "view")) {
+    return (
+      <View style={styles.centered}>
+        <Text style={{ color: theme.colors.muted }}>
+          You don&apos;t have permission to view returns.
+        </Text>
+      </View>
+    );
   }
 
   if (loading || !ret) {

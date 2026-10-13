@@ -5,6 +5,7 @@ import { supabase } from "../../../../src/lib/supabase";
 import { useBusiness } from "../../../../src/hooks/useBusiness";
 import { useOfflineSync } from "../../../../src/hooks/useOfflineSync";
 import { Button } from "../../../../src/components/button";
+import { can } from "../../../../src/lib/permissions";
 import { formatCurrency } from "../../../../src/lib/currency";
 import { theme } from "../../../../src/lib/theme";
 
@@ -17,9 +18,10 @@ type ReturnRow = {
 };
 
 export default function ReturnsList() {
-  const { business } = useBusiness();
+  const { business, permissions } = useBusiness();
   const { pendingReturnCount } = useOfflineSync();
   const router = useRouter();
+  const canAdd = can(permissions, "returns", "add");
   const [returns, setReturns] = useState<ReturnRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,13 +43,25 @@ export default function ReturnsList() {
     }, [load]),
   );
 
+  if (!can(permissions, "returns", "view")) {
+    return (
+      <View style={styles.centered}>
+        <Text style={{ color: theme.colors.muted }}>
+          You don&apos;t have permission to view returns.
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <Button
-        title="+ New Return"
-        onPress={() => router.push("/(app)/more/returns/new")}
-        style={{ marginBottom: theme.spacing.lg }}
-      />
+      {canAdd && (
+        <Button
+          title="+ New Return"
+          onPress={() => router.push("/(app)/more/returns/new")}
+          style={{ marginBottom: theme.spacing.lg }}
+        />
+      )}
 
       {pendingReturnCount > 0 && (
         <Pressable style={styles.pendingBanner} onPress={() => router.push("/(app)/more/pending-sync")}>
@@ -82,6 +96,13 @@ export default function ReturnsList() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: theme.spacing.lg, backgroundColor: theme.colors.background },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+  },
   pendingBanner: {
     backgroundColor: theme.colors.secondary,
     borderRadius: theme.radius.md,

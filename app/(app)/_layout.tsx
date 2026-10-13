@@ -21,6 +21,7 @@ export default function AppLayout() {
   const canViewDashboard = can(permissions, "dashboard", "view");
   const canViewOrders = can(permissions, "orders", "view");
   const canViewCustomers = can(permissions, "customers", "view");
+  const canViewProducts = can(permissions, "products", "view");
 
   return (
     <Tabs
@@ -44,6 +45,7 @@ export default function AppLayout() {
         name="products"
         options={{
           title: "Products",
+          href: canViewProducts ? undefined : null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="pricetags-outline" size={size} color={color} />
           ),

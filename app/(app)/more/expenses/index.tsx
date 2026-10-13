@@ -5,6 +5,7 @@ import { supabase } from "../../../../src/lib/supabase";
 import { useBusiness } from "../../../../src/hooks/useBusiness";
 import { SearchInput } from "../../../../src/components/search-input";
 import { Button } from "../../../../src/components/button";
+import { can } from "../../../../src/lib/permissions";
 import { formatCurrency } from "../../../../src/lib/currency";
 import { theme } from "../../../../src/lib/theme";
 
@@ -27,8 +28,9 @@ function today() {
 }
 
 export default function ExpensesList() {
-  const { business } = useBusiness();
+  const { business, permissions } = useBusiness();
   const router = useRouter();
+  const canAdd = can(permissions, "expenses", "add");
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [search, setSearch] = useState("");
   const [totals, setTotals] = useState({ today: 0, week: 0, month: 0 });
@@ -66,6 +68,16 @@ export default function ExpensesList() {
     }, [load]),
   );
 
+  if (!can(permissions, "expenses", "view")) {
+    return (
+      <View style={styles.centered}>
+        <Text style={{ color: theme.colors.muted }}>
+          You don&apos;t have permission to view expenses.
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.statsRow}>
@@ -85,7 +97,7 @@ export default function ExpensesList() {
 
       <View style={styles.headerRow}>
         <SearchInput style={styles.search} placeholder="Search expenses..." value={search} onChangeText={setSearch} />
-        <Button title="+ Add" size="sm" onPress={() => router.push("/(app)/more/expenses/new")} />
+        {canAdd && <Button title="+ Add" size="sm" onPress={() => router.push("/(app)/more/expenses/new")} />}
       </View>
 
       <FlatList
@@ -110,6 +122,13 @@ export default function ExpensesList() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: theme.spacing.lg, backgroundColor: theme.colors.background },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+  },
   statsRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: theme.spacing.lg },
   statBox: {
     flex: 1,

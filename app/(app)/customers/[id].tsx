@@ -11,7 +11,7 @@ import { addPendingCustomerPayment, getQueuedPaymentTotalForCustomer } from "../
 import { generateCustomerStatement, InvoiceFormat } from "../../../src/lib/invoice";
 import { openWhatsApp } from "../../../src/lib/whatsapp";
 import { can } from "../../../src/lib/permissions";
-import { formatCurrency } from "../../../src/lib/currency";
+import { formatCurrency, exceedsAmount } from "../../../src/lib/currency";
 import { Button } from "../../../src/components/button";
 import { theme } from "../../../src/lib/theme";
 
@@ -90,7 +90,7 @@ export default function CustomerProfile() {
 
     if (!isConnected) {
       const alreadyQueued = await getQueuedPaymentTotalForCustomer(business.id, session.user.id, id);
-      if (amount + alreadyQueued > totalDue) {
+      if (exceedsAmount(amount + alreadyQueued, totalDue)) {
         showAlert(
           "Too much",
           `This customer only owes ${formatCurrency(totalDue)} in total${
@@ -115,7 +115,7 @@ export default function CustomerProfile() {
       return;
     }
 
-    if (amount > totalDue) {
+    if (exceedsAmount(amount, totalDue)) {
       showAlert("Too much", `This customer only owes ${formatCurrency(totalDue)} in total.`);
       return;
     }

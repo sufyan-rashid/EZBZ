@@ -22,7 +22,7 @@ import { SegmentedControl } from "../../../src/components/segmented-control";
 import { Button } from "../../../src/components/button";
 import { can } from "../../../src/lib/permissions";
 import { effectiveUnitPrice, formatQuantity, splitPacks, UnitType } from "../../../src/lib/units";
-import { formatCurrency } from "../../../src/lib/currency";
+import { formatCurrency, isLessThanAmount } from "../../../src/lib/currency";
 import { theme } from "../../../src/lib/theme";
 
 const PAYMENT_METHODS = [
@@ -387,7 +387,7 @@ export default function NewOrder() {
     if (customerId === "__new__" && !newCustomerName.trim()) {
       return showAlert("Missing info", "Enter the new customer's name.");
     }
-    if (!customerId && amountPaidNum < total) {
+    if (!customerId && isLessThanAmount(amountPaidNum, total)) {
       return showAlert(
         "Customer required",
         "Walk-in orders must be paid in full. Select a customer to record a partial payment or credit sale.",
@@ -560,7 +560,9 @@ export default function NewOrder() {
       <View style={styles.pickerWrapper}>
         <Picker selectedValue={customerId} onValueChange={setCustomerId}>
           <Picker.Item label="Walk-in (no customer)" value="" />
-          <Picker.Item label="+ Add New Customer" value="__new__" />
+          {can(permissions, "customers", "add") && (
+            <Picker.Item label="+ Add New Customer" value="__new__" />
+          )}
           {customers.map((c) => (
             <Picker.Item key={c.id} label={c.name} value={c.id} />
           ))}

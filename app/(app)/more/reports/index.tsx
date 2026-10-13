@@ -6,6 +6,7 @@ import { showAlert } from "../../../../src/lib/alert";
 import { useBusiness } from "../../../../src/hooks/useBusiness";
 import { formatCurrency } from "../../../../src/lib/currency";
 import { Button } from "../../../../src/components/button";
+import { can } from "../../../../src/lib/permissions";
 import { theme } from "../../../../src/lib/theme";
 
 type StaffSales = { name: string; orderCount: number; total: number };
@@ -46,7 +47,7 @@ const webDateInputStyle = {
 };
 
 export default function Reports() {
-  const { business } = useBusiness();
+  const { business, permissions } = useBusiness();
   const [range, setRange] = useState<RangeOption>("7days");
   const [customStart, setCustomStart] = useState(new Date());
   const [customEnd, setCustomEnd] = useState(new Date());
@@ -118,6 +119,16 @@ export default function Reports() {
   useEffect(() => {
     load();
   }, [range]);
+
+  if (!can(permissions, "reports", "view")) {
+    return (
+      <View style={styles.centered}>
+        <Text style={{ color: theme.colors.muted }}>
+          You don&apos;t have permission to view reports.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -266,6 +277,13 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
 
 const styles = StyleSheet.create({
   container: { padding: theme.spacing.lg, backgroundColor: theme.colors.background },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+  },
   rangeRow: { flexDirection: "row", marginBottom: theme.spacing.md },
   rangeButton: {
     flex: 1,

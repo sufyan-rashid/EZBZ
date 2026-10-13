@@ -54,7 +54,10 @@ export function effectiveUnitPrice(
   fallback: number,
 ): number {
   if (quantity <= 0) return fallback;
-  return subtotal / quantity;
+  // Rounded to tame floating-point noise from the division (e.g. a Rs. 100
+  // pack of 12 divides to a repeating decimal) before it round-trips through
+  // the server, which multiplies this back out by quantity.
+  return Math.round((subtotal / quantity) * 1e6) / 1e6;
 }
 
 export function packSubtotal(packs: number, loose: number, info: ProductUnitInfo, loosePrice: number): number {

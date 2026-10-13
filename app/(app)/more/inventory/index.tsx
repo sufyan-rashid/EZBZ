@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { supabase } from "../../../../src/lib/supabase";
 import { useBusiness } from "../../../../src/hooks/useBusiness";
 import { formatQuantity, UnitType } from "../../../../src/lib/units";
+import { can } from "../../../../src/lib/permissions";
 import { theme } from "../../../../src/lib/theme";
 
 type Product = {
@@ -25,7 +26,7 @@ function stockColor(p: Product) {
 }
 
 export default function InventoryList() {
-  const { business } = useBusiness();
+  const { business, permissions } = useBusiness();
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -46,6 +47,16 @@ export default function InventoryList() {
       load();
     }, [load]),
   );
+
+  if (!can(permissions, "inventory", "view")) {
+    return (
+      <View style={styles.centered}>
+        <Text style={{ color: theme.colors.muted }}>
+          You don&apos;t have permission to view inventory.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -69,6 +80,13 @@ export default function InventoryList() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: theme.spacing.lg, backgroundColor: theme.colors.background },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+  },
   card: {
     flexDirection: "row",
     alignItems: "center",

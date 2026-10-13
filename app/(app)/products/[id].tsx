@@ -28,6 +28,7 @@ const UNIT_TYPE_LABELS: Record<UnitType, string> = {
 export default function EditProduct() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { business, permissions } = useBusiness();
+  const canView = can(permissions, "products", "view");
   const canEdit = can(permissions, "products", "edit");
   const canDelete = can(permissions, "products", "delete");
   const router = useRouter();
@@ -155,6 +156,16 @@ export default function EditProduct() {
           },
         },
       ],
+    );
+  }
+
+  if (!canView) {
+    return (
+      <View style={styles.centered}>
+        <Text style={{ color: theme.colors.muted }}>
+          You don&apos;t have permission to view products.
+        </Text>
+      </View>
     );
   }
 

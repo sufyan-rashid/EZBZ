@@ -11,6 +11,7 @@ import { addPendingReturn } from "../../../../src/lib/offlineQueue";
 import { showAlert } from "../../../../src/lib/alert";
 import { SegmentedControl } from "../../../../src/components/segmented-control";
 import { Button } from "../../../../src/components/button";
+import { can } from "../../../../src/lib/permissions";
 import { generateReturnReceipt, InvoiceFormat } from "../../../../src/lib/invoice";
 import { formatQuantity, splitPacks, UnitType } from "../../../../src/lib/units";
 import { formatCurrency } from "../../../../src/lib/currency";
@@ -51,7 +52,7 @@ type Preview = {
 };
 
 export default function NewReturn() {
-  const { business } = useBusiness();
+  const { business, permissions } = useBusiness();
   const { session } = useAuth();
   const { isConnected } = useNetwork();
   const { refresh: refreshOfflineSync } = useOfflineSync();
@@ -364,6 +365,16 @@ export default function NewReturn() {
     return preview?.items.find((i) => i.product_id === productId);
   }
 
+  if (!can(permissions, "returns", "add")) {
+    return (
+      <View style={styles.centered}>
+        <Text style={{ color: theme.colors.muted }}>
+          You don&apos;t have permission to process returns.
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.label}>Customer (optional)</Text>
@@ -572,6 +583,13 @@ export default function NewReturn() {
 
 const styles = StyleSheet.create({
   container: { padding: theme.spacing.lg, backgroundColor: theme.colors.background },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+  },
   label: {
     fontSize: 14,
     fontWeight: "600",

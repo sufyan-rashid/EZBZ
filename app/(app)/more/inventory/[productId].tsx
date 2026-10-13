@@ -3,9 +3,11 @@ import { View, Text, TextInput, Pressable, FlatList, StyleSheet  } from "react-n
 import { useLocalSearchParams, useFocusEffect } from "expo-router";
 import { supabase } from "../../../../src/lib/supabase";
 import { showAlert } from "../../../../src/lib/alert";
+import { useBusiness } from "../../../../src/hooks/useBusiness";
 import { SegmentedControl } from "../../../../src/components/segmented-control";
 import { Button } from "../../../../src/components/button";
 import { formatQuantity, UnitType } from "../../../../src/lib/units";
+import { can } from "../../../../src/lib/permissions";
 import { theme } from "../../../../src/lib/theme";
 
 type Transaction = {
@@ -23,6 +25,7 @@ const REASON_OPTIONS = REASONS.map((r) => ({ label: r, value: r }));
 
 export default function AdjustStock() {
   const { productId } = useLocalSearchParams<{ productId: string }>();
+  const { permissions } = useBusiness();
   const [productName, setProductName] = useState("");
   const [currentStock, setCurrentStock] = useState(0);
   const [unitType, setUnitType] = useState<UnitType>("each");
@@ -102,6 +105,16 @@ export default function AdjustStock() {
     setTotalCost("");
     loadProduct();
     loadTransactions();
+  }
+
+  if (!can(permissions, "inventory", "edit")) {
+    return (
+      <View style={styles.centered}>
+        <Text style={{ color: theme.colors.muted }}>
+          You don&apos;t have permission to adjust inventory.
+        </Text>
+      </View>
+    );
   }
 
   return (
@@ -190,6 +203,13 @@ export default function AdjustStock() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: theme.spacing.lg, backgroundColor: theme.colors.background },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+  },
   title: { fontSize: 20, fontWeight: "700", color: theme.colors.text },
   currentStock: { color: theme.colors.muted, marginBottom: theme.spacing.lg },
   adjustRow: { flexDirection: "row", marginBottom: theme.spacing.md },

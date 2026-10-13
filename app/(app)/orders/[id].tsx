@@ -7,7 +7,7 @@ import { useBusiness } from "../../../src/hooks/useBusiness";
 import { generateAndShareInvoice, InvoiceFormat } from "../../../src/lib/invoice";
 import { can } from "../../../src/lib/permissions";
 import { formatQuantity, UnitType } from "../../../src/lib/units";
-import { formatCurrency } from "../../../src/lib/currency";
+import { formatCurrency, exceedsAmount } from "../../../src/lib/currency";
 import { Button } from "../../../src/components/button";
 import { theme } from "../../../src/lib/theme";
 
@@ -88,7 +88,7 @@ export default function OrderDetail() {
       showAlert("Invalid amount", "Enter a payment amount greater than 0.");
       return;
     }
-    if (amount > due) {
+    if (exceedsAmount(amount, due)) {
       showAlert("Too much", `This order only has ${formatCurrency(due)} outstanding.`);
       return;
     }

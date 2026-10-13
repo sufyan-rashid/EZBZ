@@ -32,6 +32,7 @@ function stockStatus(p: Product) {
 
 export default function ProductsList() {
   const { business, permissions } = useBusiness();
+  const canView = can(permissions, "products", "view");
   const canAdd = can(permissions, "products", "add");
   const canEdit = can(permissions, "products", "edit");
   const router = useRouter();
@@ -59,6 +60,16 @@ export default function ProductsList() {
       loadProducts();
     }, [loadProducts]),
   );
+
+  if (!canView) {
+    return (
+      <View style={styles.centered}>
+        <Text style={{ color: theme.colors.muted }}>
+          You don&apos;t have permission to view products.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -125,6 +136,13 @@ export default function ProductsList() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: theme.spacing.lg, backgroundColor: theme.colors.background },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+  },
   headerRow: { flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.sm },
   search: {
     marginRight: theme.spacing.sm,

@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, FlatList, ScrollView, StyleSheet  } f
 import { useFocusEffect } from "expo-router";
 import { supabase } from "../../../../src/lib/supabase";
 import { showAlert } from "../../../../src/lib/alert";
+import { useBusiness } from "../../../../src/hooks/useBusiness";
 import { SegmentedControl } from "../../../../src/components/segmented-control";
 import { getEffectiveStatus, EffectiveSubscriptionStatus } from "../../../../src/lib/subscriptionStatus";
 import { Button } from "../../../../src/components/button";
@@ -36,6 +37,7 @@ type BusinessRow = {
 };
 
 export default function AdminPanel() {
+  const { isPlatformAdmin } = useBusiness();
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<BusinessRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -121,6 +123,16 @@ export default function AdminPanel() {
     showAlert("Saved", `${selected.business_name}'s subscription was updated.`);
     loadAll();
     if (search.trim()) handleSearch();
+  }
+
+  if (!isPlatformAdmin) {
+    return (
+      <View style={styles.centered}>
+        <Text style={{ color: theme.colors.muted }}>
+          You don&apos;t have permission to view this page.
+        </Text>
+      </View>
+    );
   }
 
   return (
@@ -242,6 +254,13 @@ export default function AdminPanel() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: theme.spacing.lg, backgroundColor: theme.colors.background },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+  },
   warning: { color: theme.colors.warning, fontSize: 12, marginBottom: theme.spacing.md, fontWeight: "600" },
   sectionBlock: { marginBottom: theme.spacing.sm },
   sectionHeader: {

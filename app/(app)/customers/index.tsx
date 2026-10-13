@@ -23,6 +23,7 @@ export default function CustomersList() {
   const { business, permissions } = useBusiness();
   const { pendingCustomerCount, pendingPaymentCount } = useOfflineSync();
   const router = useRouter();
+  const canAdd = can(permissions, "customers", "add");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
 
@@ -61,7 +62,7 @@ export default function CustomersList() {
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <SearchInput style={styles.search} placeholder="Search name or phone..." value={search} onChangeText={setSearch} />
-        <Button title="+ Add" size="sm" onPress={() => router.push("/(app)/customers/new")} />
+        {canAdd && <Button title="+ Add" size="sm" onPress={() => router.push("/(app)/customers/new")} />}
       </View>
       {pendingCustomerCount + pendingPaymentCount > 0 && (
         <Pressable style={styles.pendingBanner} onPress={() => router.push("/(app)/more/pending-sync")}>
@@ -83,7 +84,7 @@ export default function CustomersList() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyText}>No customers yet.</Text>
-            <Button title="Add Customer" onPress={() => router.push("/(app)/customers/new")} />
+            {canAdd && <Button title="Add Customer" onPress={() => router.push("/(app)/customers/new")} />}
           </View>
         }
         renderItem={({ item }) => (
