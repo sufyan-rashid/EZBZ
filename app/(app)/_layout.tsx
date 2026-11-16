@@ -8,15 +8,17 @@ import { theme } from "../../src/lib/theme";
 
 export default function AppLayout() {
   const { isActive, loading } = useSubscription();
-  const { permissions } = useBusiness();
+  const { permissions, isPlatformAdmin } = useBusiness();
   const router = useRouter();
 
+  // The platform admin manages every business's subscription from inside
+  // this app, so their own business lapsing must never lock them out of it.
   useEffect(() => {
     if (loading) return;
-    if (!isActive) {
+    if (!isActive && !isPlatformAdmin) {
       router.replace("/subscription-expired");
     }
-  }, [isActive, loading]);
+  }, [isActive, loading, isPlatformAdmin]);
 
   const canViewDashboard = can(permissions, "dashboard", "view");
   const canViewOrders = can(permissions, "orders", "view");

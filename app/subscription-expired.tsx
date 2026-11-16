@@ -74,11 +74,18 @@ export default function SubscriptionExpired() {
       />
 
       {isPlatformAdmin && (
-        <Button
-          title="Admin: Activate 30-day test subscription"
-          onPress={handleActivateTestSubscription}
-          style={{ backgroundColor: theme.colors.warning, marginBottom: theme.spacing.md }}
-        />
+        <>
+          <Button
+            title="Open Admin Panel"
+            onPress={() => router.replace("/(app)/more/admin")}
+            style={{ marginBottom: theme.spacing.md }}
+          />
+          <Button
+            title="Admin: Activate 30-day test subscription"
+            onPress={handleActivateTestSubscription}
+            style={{ backgroundColor: theme.colors.warning, marginBottom: theme.spacing.md }}
+          />
+        </>
       )}
 
       {memberships.length > 1 && (
