@@ -1262,7 +1262,8 @@ begin
         "reports": {"view": true},
         "returns": {"view": true, "add": true},
         "team": {"view": true, "add": true, "edit": true, "delete": true},
-        "settings": {"view": true, "edit": true}
+        "settings": {"view": true, "edit": true},
+        "data": {"view": true}
       }'::jsonb
   where id = p_member_id;
 end;
@@ -1638,6 +1639,12 @@ revoke all on all tables in schema public from anon, authenticated;
 revoke execute on all functions in schema public from anon, public;
 
 grant execute on all functions in schema public to authenticated;
+
+revoke execute on function business_subscription_active(uuid) from authenticated;
+revoke execute on function handle_new_user() from authenticated;
+revoke execute on function prevent_self_admin_elevation() from authenticated;
+revoke execute on function set_order_cancelled_by() from authenticated;
+revoke execute on function set_order_created_by() from authenticated;
 
 grant DELETE, INSERT, SELECT, UPDATE on public.active_sessions to authenticated;
 grant DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE on public.active_sessions to service_role;
