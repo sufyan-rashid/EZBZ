@@ -44,6 +44,7 @@ export default function CustomerProfile() {
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [orders, setOrders] = useState<Order[]>([]);
+  const [returnedTotal, setReturnedTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -67,6 +68,12 @@ export default function CustomerProfile() {
       .order("created_at", { ascending: false });
     if (ordersError) console.log("Error fetching customer orders:", ordersError.message);
     setOrders(orderData ?? []);
+    const { data: returnData, error: returnsError } = await supabase
+      .from("returns")
+      .select("net_amount")
+      .eq("customer_id", id);
+    if (returnsError) console.log("Error fetching customer returns:", returnsError.message);
+    setReturnedTotal((returnData ?? []).reduce((sum, r) => sum + Number(r.net_amount), 0));
     setLoadingData(false);
   }, [id]);
 
@@ -78,7 +85,7 @@ export default function CustomerProfile() {
 
   const activeOrders = orders.filter((o) => o.status !== "cancelled");
   const totalOrders = activeOrders.length;
-  const totalSpent = activeOrders.reduce((sum, o) => sum + Number(o.total), 0);
+  const totalSpent = Math.max(0, activeOrders.reduce((sum, o) => sum + Number(o.total), 0) - returnedTotal);
   const totalDue = activeOrders.reduce((sum, o) => sum + orderDue(o), 0);
   const lastOrder = orders[0]?.created_at;
 

@@ -101,6 +101,7 @@ export default function NewOrder() {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [amountPaid, setAmountPaid] = useState("0");
   const [amountPaidTouched, setAmountPaidTouched] = useState(false);
+  const [cashReceived, setCashReceived] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const draftRestored = useRef(false);
@@ -329,6 +330,8 @@ export default function NewOrder() {
 
   const amountPaidNum = Math.max(0, parseFloat(amountPaid) || 0);
   const due = Math.max(0, total - amountPaidNum);
+  const cashReceivedNum = parseFloat(cashReceived) || 0;
+  const changeDue = cashReceivedNum - amountPaidNum;
 
   function resetFormForNextSale() {
     setCart([]);
@@ -341,6 +344,7 @@ export default function NewOrder() {
     setPaymentMethod("cash");
     setAmountPaid("0");
     setAmountPaidTouched(false);
+    setCashReceived("");
     setNotes("");
   }
 
@@ -799,6 +803,26 @@ export default function NewOrder() {
         }}
       />
 
+      {paymentMethod === "cash" && amountPaidNum > 0 && (
+        <View style={styles.changeBox}>
+          <TextInput
+            style={[styles.input, { marginBottom: 0 }]}
+            placeholder="Cash received from customer (optional)"
+            keyboardType="decimal-pad"
+            value={cashReceived}
+            onChangeText={setCashReceived}
+          />
+          {cashReceivedNum > 0 &&
+            (changeDue >= 0 ? (
+              <Text style={styles.changeText}>Give back: {formatCurrency(changeDue)}</Text>
+            ) : (
+              <Text style={[styles.changeText, { color: theme.colors.error }]}>
+                {formatCurrency(-changeDue)} short of the amount being paid
+              </Text>
+            ))}
+        </View>
+      )}
+
       <View style={styles.summary}>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Subtotal</Text>
@@ -969,4 +993,6 @@ const styles = StyleSheet.create({
   summaryLabelBold: { color: theme.colors.text, fontWeight: "700" },
   summaryValueBold: { color: theme.colors.text, fontWeight: "700" },
   hint: { color: theme.colors.muted, fontSize: 12, textAlign: "center", marginTop: theme.spacing.sm },
+  changeBox: { marginBottom: theme.spacing.sm },
+  changeText: { color: theme.colors.success, fontWeight: "700", fontSize: 16, marginTop: theme.spacing.xs },
 });
