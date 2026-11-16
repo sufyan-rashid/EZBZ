@@ -1,5 +1,5 @@
 import { Slot, useRouter, useSegments } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "../src/hooks/useAuth";
@@ -24,6 +24,14 @@ function RootLayoutNav() {
   const router = useRouter();
 
   const landingRoute = getLandingRoute(permissions);
+
+  // Blank the app only for the very first load. Later reloads (saving
+  // settings, uploading a logo, a session refresh) used to unmount the whole
+  // tree, throwing the user off their screen and swallowing any alert.
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+  if (!initialLoadDone && !authLoading && !businessLoading) {
+    setInitialLoadDone(true);
+  }
 
   useEffect(() => {
     if (authLoading || businessLoading) return;
@@ -64,7 +72,7 @@ function RootLayoutNav() {
     }
   }, [session, authLoading, business, businessLoading, memberships, needsBusinessPicker, segments, landingRoute]);
 
-  if (authLoading || businessLoading) return null;
+  if (!initialLoadDone) return null;
 
   return (
     <>

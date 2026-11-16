@@ -35,7 +35,7 @@ export default function BusinessSettings() {
     if (!bizName.trim()) return showAlert("Missing info", "Business name is required.");
     if (!business) return;
     setSavingBiz(true);
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("businesses")
       .update({
         name: bizName.trim(),
@@ -43,10 +43,13 @@ export default function BusinessSettings() {
         phone: bizPhone.trim() || null,
         address: bizAddress.trim() || null,
       })
-      .eq("id", business.id);
+      .eq("id", business.id)
+      .select("id");
     setSavingBiz(false);
     if (error) showAlert("Error", error.message);
-    else {
+    else if (!data?.length) {
+      showAlert("Not saved", "Business info can't be changed right now — check the subscription is active and that you have Business Settings access.");
+    } else {
       showAlert("Saved", "Business info updated.");
       refreshBusiness();
     }
@@ -81,11 +84,15 @@ export default function BusinessSettings() {
       const { data: publicUrlData } = supabase.storage.from("business-logos").getPublicUrl(path);
       const logoUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
 
-      const { error: updateError } = await supabase
+      const { data: updated, error: updateError } = await supabase
         .from("businesses")
         .update({ logo_url: logoUrl })
-        .eq("id", business.id);
+        .eq("id", business.id)
+        .select("id");
       if (updateError) throw updateError;
+      if (!updated?.length) {
+        throw new Error("The logo couldn't be saved — check the subscription is active and that you have Business Settings access.");
+      }
 
       await refreshBusiness();
       showAlert("Saved", "Business logo updated.");
