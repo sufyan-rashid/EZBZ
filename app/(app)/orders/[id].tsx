@@ -4,7 +4,7 @@ import { useLocalSearchParams, useFocusEffect } from "expo-router";
 import { supabase } from "../../../src/lib/supabase";
 import { showAlert } from "../../../src/lib/alert";
 import { useBusiness } from "../../../src/hooks/useBusiness";
-import { generateAndShareInvoice, InvoiceFormat } from "../../../src/lib/invoice";
+import { generateAndShareInvoice, InvoiceFormat, PAYMENT_METHOD_LABELS } from "../../../src/lib/invoice";
 import { can } from "../../../src/lib/permissions";
 import { formatQuantity, UnitType } from "../../../src/lib/units";
 import { formatCurrency, exceedsAmount } from "../../../src/lib/currency";
@@ -27,19 +27,13 @@ type OrderDetailData = {
   discount: number;
   total: number;
   amount_paid: number;
+  credited_amount: number;
   payment_method: string;
   notes: string | null;
   created_at: string;
   customers: { name: string; phone: string | null } | null;
   creator: { full_name: string } | null;
   canceller: { full_name: string } | null;
-};
-
-const PAYMENT_LABELS: Record<string, string> = {
-  cash: "Cash",
-  card: "Card",
-  bank: "Bank Transfer",
-  other: "Other",
 };
 
 export default function OrderDetail() {
@@ -57,7 +51,7 @@ export default function OrderDetail() {
     const { data: orderData, error: orderError } = await supabase
       .from("orders")
       .select(
-        "id, order_number, status, subtotal, discount, total, amount_paid, payment_method, notes, created_at, customers(name, phone), creator:profiles!created_by(full_name), canceller:profiles!cancelled_by(full_name)",
+        "id, order_number, status, subtotal, discount, total, amount_paid, credited_amount, payment_method, notes, created_at, customers(name, phone), creator:profiles!created_by(full_name), canceller:profiles!cancelled_by(full_name)",
       )
       .eq("id", id)
       .maybeSingle();
@@ -79,7 +73,9 @@ export default function OrderDetail() {
     }, [load]),
   );
 
-  const due = order ? Math.max(0, order.total - order.amount_paid) : 0;
+  const credited = order ? Number(order.credited_amount ?? 0) : 0;
+  const due = order ? Math.max(0, order.total - order.amount_paid - credited) : 0;
+  const hasReturns = credited > 0 || items.some((i) => Number(i.returned_quantity) > 0);
 
   async function handleRecordPayment() {
     if (!order) return;
@@ -110,7 +106,9 @@ export default function OrderDetail() {
     if (!order) return;
     showAlert(
       "Cancel this order?",
-      "Stock will be restored for every item. This cannot be undone.",
+      order.amount_paid > 0
+        ? `Stock will be restored for every item, and the ${formatCurrency(order.amount_paid)} collected will be recorded as refunded to the customer. This cannot be undone.`
+        : "Stock will be restored for every item. This cannot be undone.",
       [
         { text: "No", style: "cancel" },
         {
@@ -148,6 +146,7 @@ export default function OrderDetail() {
           discount: order.discount,
           total: order.total,
           amount_paid: order.amount_paid,
+          credited_amount: credited,
           cashier_name: order.creator?.full_name ?? null,
         },
         items.map((item) => ({
@@ -239,12 +238,18 @@ export default function OrderDetail() {
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Payment Method</Text>
-          <Text style={styles.summaryValue}>{PAYMENT_LABELS[order.payment_method] ?? order.payment_method}</Text>
+          <Text style={styles.summaryValue}>{PAYMENT_METHOD_LABELS[order.payment_method] ?? order.payment_method}</Text>
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Paid</Text>
           <Text style={styles.summaryValue}>{formatCurrency(order.amount_paid)}</Text>
         </View>
+        {credited > 0 && (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Return Credit</Text>
+            <Text style={styles.summaryValue}>{formatCurrency(credited)}</Text>
+          </View>
+        )}
         {due > 0 && (
           <View style={styles.summaryRow}>
             <Text style={[styles.summaryLabel, { color: theme.colors.warning }]}>Due</Text>
@@ -273,7 +278,7 @@ export default function OrderDetail() {
         style={{ marginTop: theme.spacing.sm }}
       />
 
-      {order.status === "completed" && can(permissions, "orders", "delete") && (
+      {order.status === "completed" && !hasReturns && can(permissions, "orders", "delete") && (
         <Button
           title="Cancel Order"
           variant="outline"

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { useLocalSearchParams, useFocusEffect } from "expo-router";
 import { supabase } from "../../../../src/lib/supabase";
 import { useBusiness } from "../../../../src/hooks/useBusiness";
-import { generateReturnReceipt, InvoiceFormat } from "../../../../src/lib/invoice";
+import { generateReturnReceipt, InvoiceFormat, PAYMENT_METHOD_LABELS } from "../../../../src/lib/invoice";
 import { showAlert } from "../../../../src/lib/alert";
 import { Button } from "../../../../src/components/button";
 import { can } from "../../../../src/lib/permissions";
@@ -26,6 +26,9 @@ type ReturnDetail = {
   deduction_value: number;
   deduction_amount: number;
   net_amount: number;
+  credit_applied: number;
+  cash_refunded: number;
+  refund_method: string;
   notes: string | null;
   created_at: string;
   customers: { name: string; phone: string | null } | null;
@@ -44,7 +47,7 @@ export default function ReturnDetailScreen() {
     const { data: retData, error: retError } = await supabase
       .from("returns")
       .select(
-        "id, return_number, gross_amount, deduction_type, deduction_value, deduction_amount, net_amount, notes, created_at, customers(name, phone), creator:profiles!created_by(full_name)",
+        "id, return_number, gross_amount, deduction_type, deduction_value, deduction_amount, net_amount, credit_applied, cash_refunded, refund_method, notes, created_at, customers(name, phone), creator:profiles!created_by(full_name)",
       )
       .eq("id", id)
       .maybeSingle();
@@ -81,6 +84,9 @@ export default function ReturnDetailScreen() {
           deduction_value: ret.deduction_value,
           deduction_amount: ret.deduction_amount,
           net_amount: ret.net_amount,
+          credit_applied: Number(ret.credit_applied),
+          cash_refunded: Number(ret.cash_refunded),
+          refund_method: ret.refund_method,
           cashier_name: ret.creator?.full_name ?? null,
         },
         items.map((item) => ({
@@ -160,6 +166,20 @@ export default function ReturnDetailScreen() {
           <Text style={styles.summaryLabelBold}>Net Refund</Text>
           <Text style={styles.summaryValueBold}>{formatCurrency(ret.net_amount)}</Text>
         </View>
+        {Number(ret.credit_applied) > 0 && (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Adjusted in balance</Text>
+            <Text style={styles.summaryValue}>{formatCurrency(ret.credit_applied)}</Text>
+          </View>
+        )}
+        {Number(ret.cash_refunded) > 0 && (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>
+              Refunded ({PAYMENT_METHOD_LABELS[ret.refund_method] ?? ret.refund_method})
+            </Text>
+            <Text style={styles.summaryValue}>{formatCurrency(ret.cash_refunded)}</Text>
+          </View>
+        )}
       </View>
 
       {ret.notes ? <Text style={styles.notes}>Notes: {ret.notes}</Text> : null}

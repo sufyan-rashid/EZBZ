@@ -5,6 +5,7 @@ import { supabase } from "../../../../src/lib/supabase";
 import { showAlert } from "../../../../src/lib/alert";
 import { useBusiness } from "../../../../src/hooks/useBusiness";
 import { formatCurrency } from "../../../../src/lib/currency";
+import { PAYMENT_METHOD_LABELS } from "../../../../src/lib/invoice";
 import { Button } from "../../../../src/components/button";
 import { can } from "../../../../src/lib/permissions";
 import { theme } from "../../../../src/lib/theme";
@@ -250,13 +251,13 @@ export default function Reports() {
             )}
           </View>
 
-          <Text style={styles.sectionTitle}>Payments by Method</Text>
+          <Text style={styles.sectionTitle}>Net Collection by Method</Text>
           <View style={styles.card}>
             {Object.keys(report.payment_breakdown ?? {}).length === 0 ? (
               <Text style={styles.emptyInline}>No payments in this period.</Text>
             ) : (
               Object.entries(report.payment_breakdown ?? {}).map(([method, amount]) => (
-                <Row key={method} label={method.charAt(0).toUpperCase() + method.slice(1)} value={formatCurrency(Number(amount))} />
+                <Row key={method} label={PAYMENT_METHOD_LABELS[method] ?? method} value={formatCurrency(Number(amount))} />
               ))
             )}
           </View>

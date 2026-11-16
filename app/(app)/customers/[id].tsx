@@ -21,8 +21,13 @@ type Order = {
   status: string;
   total: number;
   amount_paid: number;
+  credited_amount: number;
   created_at: string;
 };
+
+function orderDue(o: Order): number {
+  return Math.max(0, Number(o.total) - Number(o.amount_paid) - Number(o.credited_amount ?? 0));
+}
 
 export default function CustomerProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -57,7 +62,7 @@ export default function CustomerProfile() {
     }
     const { data: orderData, error: ordersError } = await supabase
       .from("orders")
-      .select("id, order_number, status, total, amount_paid, created_at")
+      .select("id, order_number, status, total, amount_paid, credited_amount, created_at")
       .eq("customer_id", id)
       .order("created_at", { ascending: false });
     if (ordersError) console.log("Error fetching customer orders:", ordersError.message);
@@ -74,10 +79,7 @@ export default function CustomerProfile() {
   const activeOrders = orders.filter((o) => o.status !== "cancelled");
   const totalOrders = activeOrders.length;
   const totalSpent = activeOrders.reduce((sum, o) => sum + Number(o.total), 0);
-  const totalDue = activeOrders.reduce(
-    (sum, o) => sum + Math.max(0, Number(o.total) - Number(o.amount_paid)),
-    0,
-  );
+  const totalDue = activeOrders.reduce((sum, o) => sum + orderDue(o), 0);
   const lastOrder = orders[0]?.created_at;
 
   async function handleRecordPayment() {
@@ -333,7 +335,7 @@ export default function CustomerProfile() {
         <Text style={styles.empty}>No orders yet.</Text>
       ) : (
         orders.map((o) => {
-          const due = Math.max(0, Number(o.total) - Number(o.amount_paid));
+          const due = orderDue(o);
           return (
             <Pressable
               key={o.id}

@@ -119,6 +119,7 @@ export async function syncPendingReturns(
         p_deduction_value: item.payload.deductionValue,
         p_notes: item.payload.notes || null,
         p_dry_run: false,
+        p_refund_method: item.payload.refundMethod ?? "cash",
       });
       if (error) throw error;
 

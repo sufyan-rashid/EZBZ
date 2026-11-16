@@ -8,6 +8,7 @@ import { useNetwork } from "../../../src/hooks/useNetwork";
 import { supabase } from "../../../src/lib/supabase";
 import { can } from "../../../src/lib/permissions";
 import { formatCurrency } from "../../../src/lib/currency";
+import { PAYMENT_METHOD_LABELS } from "../../../src/lib/invoice";
 import { theme } from "../../../src/lib/theme";
 
 type Stats = {
@@ -287,7 +288,7 @@ export default function Dashboard() {
         })}
       </View>
 
-      <Text style={styles.sectionTitle}>Today&apos;s Payments by Method</Text>
+      <Text style={styles.sectionTitle}>Today&apos;s Collection by Method</Text>
       <View style={styles.card}>
         {Object.keys(stats?.payment_breakdown ?? {}).length === 0 ? (
           <Text style={styles.empty}>No sales yet today.</Text>
@@ -296,12 +297,15 @@ export default function Dashboard() {
             ([method, amount]) => (
               <View key={method} style={styles.listRow}>
                 <Text style={styles.listRowText}>
-                  {method.charAt(0).toUpperCase() + method.slice(1)}
+                  {PAYMENT_METHOD_LABELS[method] ?? method}
                 </Text>
                 <Text style={styles.listRowText}>{formatCurrency(amount as number)}</Text>
               </View>
             ),
           )
+        )}
+        {Object.keys(stats?.payment_breakdown ?? {}).length > 0 && (
+          <Text style={styles.breakdownHint}>Money received minus refunds paid out today.</Text>
         )}
       </View>
 
@@ -518,6 +522,7 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   listRowText: { color: theme.colors.text },
+  breakdownHint: { color: theme.colors.muted, fontSize: 11, marginTop: theme.spacing.xs },
   listRowWarning: { color: theme.colors.warning, fontWeight: "600" },
   quickActions: {
     flexDirection: "row",

@@ -49,7 +49,17 @@ type Preview = {
   gross_amount: number;
   deduction_amount: number;
   net_amount: number;
+  customer_due?: number;
+  credit_applied?: number;
+  cash_refund?: number;
 };
+
+const REFUND_METHODS = [
+  { label: "Cash", value: "cash" },
+  { label: "Card", value: "card" },
+  { label: "Bank Transfer", value: "bank" },
+  { label: "Other", value: "other" },
+] as const;
 
 export default function NewReturn() {
   const { business, permissions } = useBusiness();
@@ -66,6 +76,7 @@ export default function NewReturn() {
   const [deductionType, setDeductionType] = useState<"flat" | "percentage">("flat");
   const [deductionValue, setDeductionValue] = useState("0");
   const [notes, setNotes] = useState("");
+  const [refundMethod, setRefundMethod] = useState("cash");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -180,6 +191,7 @@ export default function NewReturn() {
         p_deduction_value: deductionNum,
         p_notes: notes.trim() || null,
         p_dry_run: true,
+        p_refund_method: refundMethod,
       });
       setPreviewing(false);
       if (!error) setPreview(data as Preview);
@@ -197,18 +209,26 @@ export default function NewReturn() {
     setDeductionType("flat");
     setDeductionValue("0");
     setNotes("");
+    setRefundMethod("cash");
     setPreview(null);
   }
 
+  function currentPriceSubtotal(c: CartItem): number {
+    const product = products.find((p) => p.id === c.product_id);
+    const unitPrice = product?.selling_price ?? 0;
+    if (c.unit_type === "pack" && c.pack_size) {
+      const { packs, loose } = splitPacks(c.quantity, c.pack_size);
+      return packs * (c.pack_price ?? 0) + loose * unitPrice;
+    }
+    return c.quantity * unitPrice;
+  }
+
   // Can't ask the server to match original sale prices while offline, so
-  // this is a rough stand-in using each product's current selling price —
+  // this is a rough stand-in using each product's current price —
   // good enough for the cashier to see roughly what's being refunded; the
   // real gross/net amount is computed for real once this syncs.
   function offlineEstimate() {
-    const gross = validCart.reduce((sum, c) => {
-      const product = products.find((p) => p.id === c.product_id);
-      return sum + c.quantity * (product?.selling_price ?? 0);
-    }, 0);
+    const gross = validCart.reduce((sum, c) => sum + currentPriceSubtotal(c), 0);
     const deduction = deductionType === "percentage" ? (gross * deductionNum) / 100 : deductionNum;
     return { gross, net: Math.max(0, gross - deduction) };
   }
@@ -232,12 +252,12 @@ export default function NewReturn() {
           cashier_name: (session?.user.user_metadata?.full_name as string) ?? null,
         },
         validCart.map((c) => {
-          const product = products.find((p) => p.id === c.product_id);
+          const subtotal = currentPriceSubtotal(c);
           return {
             name: c.name,
             quantity: c.quantity,
-            unit_price: product?.selling_price ?? 0,
-            subtotal: c.quantity * (product?.selling_price ?? 0),
+            unit_price: c.quantity > 0 ? subtotal / c.quantity : 0,
+            subtotal,
             unit_type: c.unit_type,
             unit: c.unit,
             pack_size: c.pack_size,
@@ -264,6 +284,7 @@ export default function NewReturn() {
         deductionValue: deductionNum,
         notes: notes.trim(),
         netEstimate: offlineEstimate().net,
+        refundMethod,
       });
       await refreshOfflineSync();
 
@@ -288,6 +309,7 @@ export default function NewReturn() {
       p_deduction_value: deductionNum,
       p_notes: notes.trim() || null,
       p_dry_run: false,
+      p_refund_method: refundMethod,
     });
     if (error) {
       setSaving(false);
@@ -295,6 +317,14 @@ export default function NewReturn() {
       return;
     }
     const result = data as Preview & { return_id: string; return_number: string };
+    const credit = Number(result.credit_applied ?? 0);
+    const cash = Number(result.cash_refund ?? result.net_amount);
+    const settlement =
+      credit > 0
+        ? cash > 0
+          ? `${formatCurrency(credit)} adjusted against the customer's balance, ${formatCurrency(cash)} refunded.`
+          : `${formatCurrency(credit)} adjusted against the customer's balance — no cash to hand back.`
+        : `${formatCurrency(cash)} refunded.`;
 
     if (printFormat) {
       await printReceipt(result.return_id, printFormat);
@@ -306,7 +336,7 @@ export default function NewReturn() {
     setSaving(false);
     showAlert(
       "Return Processed",
-      `${result.return_number}: ${formatCurrency(result.net_amount)} refunded. Stock has been updated.`,
+      `${result.return_number}: ${settlement} Stock has been updated.`,
       [{ text: "OK", onPress: () => router.back() }],
     );
   }
@@ -316,7 +346,7 @@ export default function NewReturn() {
     const { data: ret, error: retError } = await supabase
       .from("returns")
       .select(
-        "return_number, created_at, gross_amount, deduction_type, deduction_value, deduction_amount, net_amount, customers(name, phone), creator:profiles!created_by(full_name)",
+        "return_number, created_at, gross_amount, deduction_type, deduction_value, deduction_amount, net_amount, credit_applied, cash_refunded, refund_method, customers(name, phone), creator:profiles!created_by(full_name)",
       )
       .eq("id", returnId)
       .maybeSingle();
@@ -343,6 +373,9 @@ export default function NewReturn() {
           deduction_value: ret.deduction_value,
           deduction_amount: ret.deduction_amount,
           net_amount: ret.net_amount,
+          credit_applied: Number(ret.credit_applied),
+          cash_refunded: Number(ret.cash_refunded),
+          refund_method: ret.refund_method,
           cashier_name: (ret as any).creator?.full_name ?? null,
         },
         (items ?? []).map((item: any) => ({
@@ -524,6 +557,15 @@ export default function NewReturn() {
         onChangeText={setNotes}
       />
 
+      <Text style={styles.label}>Refund Paid By</Text>
+      <SegmentedControl options={REFUND_METHODS} value={refundMethod} onChange={setRefundMethod} />
+      {customerId ? (
+        <Text style={styles.creditHint}>
+          If this customer owes you money, the refund is first knocked off their balance; only the rest is paid
+          back.
+        </Text>
+      ) : null}
+
       <View style={styles.summary}>
         {previewing && <ActivityIndicator color={theme.colors.primary} style={{ marginBottom: theme.spacing.sm }} />}
         {!isConnected && validCart.length > 0 && (
@@ -547,6 +589,20 @@ export default function NewReturn() {
             {formatCurrency(isConnected ? (preview?.net_amount ?? 0) : offlineEstimate().net)}
           </Text>
         </View>
+        {isConnected && (preview?.credit_applied ?? 0) > 0 && (
+          <>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>
+                Adjusted in balance (owes {formatCurrency(preview?.customer_due ?? 0)})
+              </Text>
+              <Text style={styles.summaryValue}>− {formatCurrency(preview?.credit_applied ?? 0)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabelBold}>Pay Back Now</Text>
+              <Text style={styles.summaryValueBold}>{formatCurrency(preview?.cash_refund ?? 0)}</Text>
+            </View>
+          </>
+        )}
       </View>
 
       <Button
@@ -583,6 +639,7 @@ export default function NewReturn() {
 
 const styles = StyleSheet.create({
   container: { padding: theme.spacing.lg, backgroundColor: theme.colors.background },
+  creditHint: { color: theme.colors.muted, fontSize: 12, marginTop: theme.spacing.xs },
   centered: {
     flex: 1,
     justifyContent: "center",

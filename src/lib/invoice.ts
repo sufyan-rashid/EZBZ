@@ -66,8 +66,25 @@ type InvoiceOrder = {
   discount: number;
   total: number;
   amount_paid: number;
+  credited_amount?: number;
   cashier_name?: string | null;
 };
+
+export const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  cash: "Cash",
+  card: "Card",
+  bank: "Bank Transfer",
+  online: "Online",
+  other: "Other",
+};
+
+function methodLabel(method: string | null | undefined): string {
+  return PAYMENT_METHOD_LABELS[method ?? "cash"] ?? method ?? "Cash";
+}
+
+function orderDue(o: { total: number; amount_paid: number; credited_amount?: number }): number {
+  return Math.max(0, Number(o.total) - Number(o.amount_paid) - Number(o.credited_amount ?? 0));
+}
 export type InvoiceFormat = "a4" | "thermal";
 
 function escapeHtml(str: string) {
@@ -86,7 +103,8 @@ function buildA4InvoiceHTML(
   order: InvoiceOrder,
   items: InvoiceItem[],
 ) {
-  const due = order.total - order.amount_paid;
+  const due = orderDue(order);
+  const credited = Number(order.credited_amount ?? 0);
   const rows = items
     .map(
       (item, index) => `
@@ -146,6 +164,7 @@ function buildA4InvoiceHTML(
       <div class="totals-row"><span>Discount</span><span>${money(order.discount)}</span></div>
       <div class="totals-row grand"><span>Total</span><span>${money(order.total)}</span></div>
       <div class="totals-row"><span>Paid</span><span>${money(order.amount_paid)}</span></div>
+      ${credited > 0 ? `<div class="totals-row"><span>Return Credit</span><span>${money(credited)}</span></div>` : ""}
       ${due > 0 ? `<div class="totals-row" style="color:#D97706;font-weight:600"><span>Due</span><span>${money(due)}</span></div>` : ""}
     </div>
     <div class="footer">Thank you for your business</div>
@@ -158,7 +177,8 @@ function buildThermalInvoiceHTML(
   order: InvoiceOrder,
   items: InvoiceItem[],
 ) {
-  const due = order.total - order.amount_paid;
+  const due = orderDue(order);
+  const credited = Number(order.credited_amount ?? 0);
   const itemsHtml = items
     .map(
       (item) => `
@@ -194,7 +214,8 @@ function buildThermalInvoiceHTML(
     <div class="row"><span>Subtotal</span><span>${order.subtotal.toFixed(2)}</span></div>
     <div class="row"><span>Discount</span><span>${order.discount.toFixed(2)}</span></div>
     <div class="row bold"><span>Total</span><span>${order.total.toFixed(2)}</span></div>
-    <div class="row"><span>Paid</span><span>${order.amount_paid.toFixed(2)}</span></div>
+    <div class="row"><span>Paid</span><span>${Number(order.amount_paid).toFixed(2)}</span></div>
+    ${credited > 0 ? `<div class="row"><span>Return Credit</span><span>${credited.toFixed(2)}</span></div>` : ""}
     ${due > 0 ? `<div class="row bold"><span>Due</span><span>${due.toFixed(2)}</span></div>` : ""}
     <div class="line"></div>
     <div class="center">Thank you!</div>
@@ -269,8 +290,17 @@ type StatementOrder = {
   created_at: string;
   total: number;
   amount_paid: number;
+  credited_amount?: number;
   status: string;
 };
+
+function statementTotals(active: StatementOrder[]) {
+  const totalPurchases = active.reduce((s, o) => s + Number(o.total), 0);
+  const totalPaid = active.reduce((s, o) => s + Number(o.amount_paid), 0);
+  const totalCredited = active.reduce((s, o) => s + Number(o.credited_amount ?? 0), 0);
+  const totalDue = active.reduce((s, o) => s + orderDue(o), 0);
+  return { totalPurchases, totalPaid, totalCredited, totalDue };
+}
 
 function buildCustomerStatementHTML(
   business: InvoiceBusiness,
@@ -283,21 +313,20 @@ function buildCustomerStatementHTML(
     .slice()
     .reverse()
     .map((o) => {
-      const due = Math.max(0, Number(o.total) - Number(o.amount_paid));
+      const due = orderDue(o);
+      const credited = Number(o.credited_amount ?? 0);
       return `
     <tr>
       <td>${new Date(o.created_at).toLocaleDateString()}</td>
       <td>${escapeHtml(o.order_number)}</td>
       <td style="text-align:right">${money(Number(o.total))}</td>
-      <td style="text-align:right">${money(Number(o.amount_paid))}</td>
+      <td style="text-align:right">${money(Number(o.amount_paid))}${credited > 0 ? `<div class="muted">+ ${money(credited)} return</div>` : ""}</td>
       <td style="text-align:right; ${due > 0 ? "color:#D97706;font-weight:600" : ""}">${money(due)}</td>
     </tr>`;
     })
     .join("");
 
-  const totalPurchases = active.reduce((s, o) => s + Number(o.total), 0);
-  const totalPaid = active.reduce((s, o) => s + Number(o.amount_paid), 0);
-  const totalDue = Math.max(0, totalPurchases - totalPaid);
+  const { totalPurchases, totalPaid, totalCredited, totalDue } = statementTotals(active);
 
   return `
   <html><head><meta charset="utf-8" /><style>
@@ -338,6 +367,7 @@ function buildCustomerStatementHTML(
     <div class="totals">
       <div class="totals-row"><span>Total Purchases</span><span>${money(totalPurchases)}</span></div>
       <div class="totals-row"><span>Total Paid</span><span>${money(totalPaid)}</span></div>
+      ${totalCredited > 0 ? `<div class="totals-row"><span>Return Credits</span><span>${money(totalCredited)}</span></div>` : ""}
       <div class="totals-row grand"><span>Balance Due</span><span>${money(totalDue)}</span></div>
     </div>
     <div class="footer">Thank you for your business</div>
@@ -355,18 +385,18 @@ function buildThermalCustomerStatementHTML(
     .slice()
     .reverse()
     .map((o) => {
-      const due = Math.max(0, Number(o.total) - Number(o.amount_paid));
+      const due = orderDue(o);
+      const credited = Number(o.credited_amount ?? 0);
       return `
     <div>${escapeHtml(o.order_number)} - ${new Date(o.created_at).toLocaleDateString()}</div>
     <div class="row"><span>Total ${money(Number(o.total))}</span><span>Paid ${money(Number(o.amount_paid))}</span></div>
+    ${credited > 0 ? `<div class="row"><span></span><span>Return ${money(credited)}</span></div>` : ""}
     ${due > 0 ? `<div class="row bold"><span></span><span>Due ${money(due)}</span></div>` : ""}
   `;
     })
     .join("<div class=\"line\"></div>");
 
-  const totalPurchases = active.reduce((s, o) => s + Number(o.total), 0);
-  const totalPaid = active.reduce((s, o) => s + Number(o.amount_paid), 0);
-  const totalDue = Math.max(0, totalPurchases - totalPaid);
+  const { totalPurchases, totalPaid, totalCredited, totalDue } = statementTotals(active);
 
   return `
   <html><head><meta charset="utf-8" /><style>
@@ -392,6 +422,7 @@ function buildThermalCustomerStatementHTML(
     <div class="line"></div>
     <div class="row"><span>Total Purchases</span><span>${money(totalPurchases)}</span></div>
     <div class="row"><span>Total Paid</span><span>${money(totalPaid)}</span></div>
+    ${totalCredited > 0 ? `<div class="row"><span>Return Credits</span><span>${money(totalCredited)}</span></div>` : ""}
     <div class="row bold"><span>Balance Due</span><span>${money(totalDue)}</span></div>
     <div class="line"></div>
     <div class="center">Thank you!</div>
@@ -420,8 +451,24 @@ type InvoiceReturn = {
   deduction_value: number;
   deduction_amount: number;
   net_amount: number;
+  credit_applied?: number;
+  cash_refunded?: number;
+  refund_method?: string | null;
   cashier_name?: string | null;
 };
+
+// How the net refund was settled: knocked off the customer's balance,
+// handed back, or both. Undefined split (offline estimate) shows nothing.
+function returnSettlementRows(ret: InvoiceReturn, thermal: boolean): string {
+  const credit = Number(ret.credit_applied ?? 0);
+  if (ret.credit_applied === undefined || credit <= 0) return "";
+  const cash = Number(ret.cash_refunded ?? 0);
+  const fmt = (n: number) => (thermal ? n.toFixed(2) : money(n));
+  const cls = thermal ? "row" : "totals-row";
+  return `
+    <div class="${cls}"><span>Adjusted in balance</span><span>${fmt(credit)}</span></div>
+    ${cash > 0 ? `<div class="${cls}"><span>Refunded (${methodLabel(ret.refund_method)})</span><span>${fmt(cash)}</span></div>` : ""}`;
+}
 
 function buildA4ReturnReceiptHTML(
   business: InvoiceBusiness,
@@ -488,6 +535,7 @@ function buildA4ReturnReceiptHTML(
       <div class="totals-row"><span>Gross Amount</span><span>${money(ret.gross_amount)}</span></div>
       ${ret.deduction_amount > 0 ? `<div class="totals-row"><span>Deduction (${deductionLabel})</span><span>− ${money(ret.deduction_amount)}</span></div>` : ""}
       <div class="totals-row grand"><span>Net Refund</span><span>${money(ret.net_amount)}</span></div>
+      ${returnSettlementRows(ret, false)}
     </div>
     <div class="footer">Thank you for your business</div>
   </body></html>`;
@@ -535,7 +583,8 @@ function buildThermalReturnReceiptHTML(
     <div class="line"></div>
     <div class="row"><span>Gross Amount</span><span>${ret.gross_amount.toFixed(2)}</span></div>
     ${ret.deduction_amount > 0 ? `<div class="row"><span>Deduction (${deductionLabel})</span><span>-${ret.deduction_amount.toFixed(2)}</span></div>` : ""}
-    <div class="row bold"><span>Net Refund</span><span>${ret.net_amount.toFixed(2)}</span></div>
+    <div class="row bold"><span>Net Refund</span><span>${Number(ret.net_amount).toFixed(2)}</span></div>
+    ${returnSettlementRows(ret, true)}
     <div class="line"></div>
     <div class="center">Thank you!</div>
   </body></html>`;

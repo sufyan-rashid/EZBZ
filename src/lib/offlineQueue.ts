@@ -32,6 +32,7 @@ export type PendingReturnPayload = {
   deductionValue: number;
   notes: string;
   netEstimate: number;
+  refundMethod?: string;
 };
 
 export type PendingCustomerPayload = {

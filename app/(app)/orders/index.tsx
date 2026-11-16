@@ -16,6 +16,7 @@ type Order = {
   status: string;
   total: number;
   amount_paid: number;
+  credited_amount: number;
   created_at: string;
   customers: { name: string } | null;
 };
@@ -32,7 +33,7 @@ export default function OrdersList() {
     if (!business) return;
     let query = supabase
       .from("orders")
-      .select("id, order_number, status, total, amount_paid, created_at, customers(name)")
+      .select("id, order_number, status, total, amount_paid, credited_amount, created_at, customers(name)")
       .eq("business_id", business.id)
       .order("created_at", { ascending: false });
     if (search.trim()) {
@@ -87,7 +88,7 @@ export default function OrdersList() {
           </View>
         }
         renderItem={({ item }) => {
-          const due = Math.max(0, item.total - item.amount_paid);
+          const due = Math.max(0, item.total - item.amount_paid - Number(item.credited_amount ?? 0));
           return (
             <Pressable style={styles.card} onPress={() => router.push(`/(app)/orders/${item.id}`)}>
               <View style={{ flex: 1 }}>
