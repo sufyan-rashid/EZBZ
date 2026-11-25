@@ -13,6 +13,7 @@ import { theme } from "../../../src/lib/theme";
 
 type Stats = {
   today_sales: number;
+  today_returns: number;
   today_orders: number;
   today_expenses: number;
   today_profit: number;
@@ -49,6 +50,7 @@ export default function Dashboard() {
   const { pendingOrderCount, pendingOrderTotal, pendingReturnCount, pendingCustomerCount, pendingPaymentCount } =
     useOfflineSync();
   const [stats, setStats] = useState<Stats | null>(null);
+  const todayReturns = Number(stats?.today_returns ?? 0);
   const [chartDays, setChartDays] = useState<7 | 30>(7);
   const [chartData, setChartData] = useState<ChartDay[]>([]);
   const [lowStock, setLowStock] = useState<LowStockProduct[]>([]);
@@ -163,6 +165,20 @@ export default function Dashboard() {
         >
           <Text style={styles.statValue}>{formatCurrency(stats?.today_sales ?? 0)}</Text>
           <Text style={styles.statLabel}>Today&apos;s Sales</Text>
+          {todayReturns > 0 && (
+            <Text style={styles.statSub}>
+              Net after returns: {formatCurrency((stats?.today_sales ?? 0) - todayReturns)}
+            </Text>
+          )}
+        </Pressable>
+        <Pressable
+          style={styles.statCard}
+          onPress={() => can(permissions, "returns", "view") && router.push("/(app)/more/returns")}
+        >
+          <Text style={[styles.statValue, todayReturns > 0 && { color: theme.colors.error }]}>
+            {formatCurrency(todayReturns)}
+          </Text>
+          <Text style={styles.statLabel}>Today&apos;s Returns</Text>
         </Pressable>
         <Pressable
           style={styles.statCard}
@@ -452,6 +468,7 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: 20, fontWeight: "700", color: theme.colors.text },
   statLabel: { fontSize: 12, color: theme.colors.muted, marginTop: 2 },
+  statSub: { fontSize: 11, color: theme.colors.muted, marginTop: 4 },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
