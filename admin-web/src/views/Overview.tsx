@@ -12,6 +12,8 @@ import {
 } from "../lib/format";
 import { StatusBadge } from "./StatusBadge";
 
+const PAY = "EasyPaisa/JazzCash 0300-2778713 (Sufiyan Rashid)";
+
 type Props = {
   rows: BusinessRow[];
   payments: PaymentRow[];
@@ -59,7 +61,7 @@ export function Overview({ rows, payments, onOpen }: Props) {
         onOpen={onOpen}
         when={(r) => `Expires ${relDays(r.expiry_date)} (${fmtDate(r.expiry_date)})`}
         message={(r) =>
-          `Assalam o Alaikum! Aap ki EZBZ subscription (${r.business_name}) ${fmtDate(r.expiry_date)} ko khatam ho rahi hai. Renew karne ke liye is message ka jawab dein.`
+          `Assalam o Alaikum! Aap ki EZBZ subscription (${r.business_name}) ${fmtDate(r.expiry_date)} ko khatam ho rahi hai. Renew karne ke liye ${PAY} pe payment bhej ke TID is number pe bhej dein.`
         }
       />
       <FollowUp
@@ -69,7 +71,7 @@ export function Overview({ rows, payments, onOpen }: Props) {
         onOpen={onOpen}
         when={(r) => `Expired ${relDays(r.expiry_date)}`}
         message={(r) =>
-          `Assalam o Alaikum! Aap ki EZBZ subscription (${r.business_name}) khatam ho chuki hai. Aap ka data mehfooz hai — renew karke dobara shuru karein.`
+          `Assalam o Alaikum! Aap ki EZBZ subscription (${r.business_name}) khatam ho chuki hai. Aap ka data mehfooz hai. Renew karne ke liye ${PAY} pe payment bhej ke TID is number pe bhej dein.`
         }
       />
       <FollowUp

@@ -1,12 +1,13 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSubscription } from "../src/hooks/useSubscription";
 import { useBusiness } from "../src/hooks/useBusiness";
 import { supabase } from "../src/lib/supabase";
 import { showAlert } from "../src/lib/alert";
 import { openSupportWhatsApp } from "../src/lib/support";
 import { Button } from "../src/components/button";
+import { PaymentInstructions } from "../src/components/payment-instructions";
 import { theme } from "../src/lib/theme";
 
 export default function SubscriptionExpired() {
@@ -23,7 +24,7 @@ export default function SubscriptionExpired() {
 
   function handleRenew() {
     openSupportWhatsApp(
-      `Hi, I'd like to renew my EZBZ subscription for "${business?.name ?? "my business"}".`,
+      `Hi, I've sent the EZBZ subscription payment for "${business?.name ?? "my business"}". TID: `,
     );
   }
 
@@ -47,7 +48,7 @@ export default function SubscriptionExpired() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       <Text style={styles.title}>Your subscription has expired</Text>
       <Text style={styles.subtitle}>Your business data is safe.</Text>
 
@@ -63,7 +64,9 @@ export default function SubscriptionExpired() {
         </Text>
       </View>
 
-      <Button title="Contact Us to Renew" onPress={handleRenew} style={{ marginBottom: theme.spacing.md }} />
+      <PaymentInstructions monthlyAmount={subscription?.amount} />
+
+      <Button title="Send Payment Proof on WhatsApp" onPress={handleRenew} style={{ marginBottom: theme.spacing.md }} />
 
       <Button
         title={refreshing ? "Checking..." : "I've Paid — Refresh"}
@@ -96,13 +99,14 @@ export default function SubscriptionExpired() {
       >
         <Text style={styles.logoutText}>Log Out</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  scroll: { flex: 1, backgroundColor: theme.colors.background },
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: "center",
     padding: theme.spacing.lg,
     backgroundColor: theme.colors.background,

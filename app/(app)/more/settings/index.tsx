@@ -9,6 +9,7 @@ import { useSubscription } from "../../../../src/hooks/useSubscription";
 import { can } from "../../../../src/lib/permissions";
 import { formatCurrency } from "../../../../src/lib/currency";
 import { Button } from "../../../../src/components/button";
+import { PaymentInstructions } from "../../../../src/components/payment-instructions";
 import { theme } from "../../../../src/lib/theme";
 
 export default function BusinessSettings() {
@@ -104,7 +105,7 @@ export default function BusinessSettings() {
 
   function handleRenew() {
     openSupportWhatsApp(
-      `Hi, I'd like to renew my EZBZ subscription for "${business?.name ?? "my business"}".`,
+      `Hi, I've sent the EZBZ subscription payment for "${business?.name ?? "my business"}". TID: `,
     );
   }
 
@@ -166,7 +167,10 @@ export default function BusinessSettings() {
           label="Expiry"
           value={subscription?.expiry_date ? new Date(subscription.expiry_date).toLocaleDateString() : "Not activated"}
         />
-        <Button title="Renew / Contact Support" onPress={handleRenew} style={{ marginTop: theme.spacing.md }} />
+        <Button title="Send Payment Proof on WhatsApp" onPress={handleRenew} style={{ marginTop: theme.spacing.md }} />
+      </View>
+      <View style={{ marginTop: theme.spacing.md }}>
+        <PaymentInstructions monthlyAmount={subscription?.amount} />
       </View>
 
       <Text style={styles.sectionTitle}>Preferences</Text>
