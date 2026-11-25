@@ -11,7 +11,7 @@ import { theme } from "../../../src/lib/theme";
 export default function More() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { permissions, isPlatformAdmin, memberships } = useBusiness();
+  const { permissions, memberships } = useBusiness();
   const { pendingOrderCount, pendingReturnCount, pendingCustomerCount, pendingPaymentCount } = useOfflineSync();
   const pendingTotal = pendingOrderCount + pendingReturnCount + pendingCustomerCount + pendingPaymentCount;
 
@@ -54,7 +54,6 @@ export default function More() {
           route: "/(onboarding)/select-business",
           show: true,
         },
-        { name: "Admin", route: "/(app)/more/admin", show: isPlatformAdmin },
       ],
     },
   ]
