@@ -235,7 +235,7 @@ create table public.subscriptions (
   currency text default 'PKR'::text not null,
   start_date timestamp with time zone,
   expiry_date timestamp with time zone,
-  max_users integer default 3 not null,
+  max_users integer default 2 not null,
   created_at timestamp with time zone default now() not null,
   updated_at timestamp with time zone default now() not null
 );
@@ -668,7 +668,7 @@ begin
   values (v_business_id, auth.uid(), 'Owner', v_full_permissions);
 
   insert into subscriptions (business_id, plan, status, amount, currency, start_date, expiry_date, max_users)
-  values (v_business_id, 'monthly', 'trial', 0, coalesce(p_currency, 'PKR'), now(), now() + interval '7 days', 3);
+  values (v_business_id, 'monthly', 'trial', 0, coalesce(p_currency, 'PKR'), now(), now() + interval '15 days', 2);
 
   return v_business_id;
 end;
